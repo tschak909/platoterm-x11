@@ -25,6 +25,7 @@ padByte rxBuf[32768];
 struct sockaddr_in sa;
 int sockfd;
 int fileflags;
+struct hostent *hp;
 
 io_inject(b,l)
 padByte* b;
@@ -39,7 +40,16 @@ io_init(hostname,port)
 char *hostname;
 unsigned short port;
 {
-        sockfd = socket(AF_INET, SOCK_STREAM, 0);        
+	hp = gethostbyname(hostname);
+	
+	if (hp == 0)
+	{
+		sa.sin_addr.s_addr = inet_addr(hostname);
+	}
+	else
+		bcopy(hp->h_addr,(char *)&sa.sin_addr, hp->h_length);
+	
+	sockfd = socket(AF_INET, SOCK_STREAM, 0);        
         sa.sin_family = AF_INET;       
         sa.sin_addr.s_addr = inet_addr(hostname);
 	sa.sin_port = htons(port);
