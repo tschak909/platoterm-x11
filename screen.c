@@ -42,11 +42,12 @@ XColor color[16];
 int usedColors=0;
 Pixmap fontm0m1;
 XImage *image;
-Atom wm_delete_window;
+Atom wmdeleteMessage;
 XEvent event;
 KeySym ks;
 unsigned char control_pressed, shift_pressed;
 padRGB backgroundColor,foregroundColor;
+int ctr;
 
 unsigned long black, white;
 
@@ -82,10 +83,12 @@ unsigned short port;
 	colormap = DefaultColormap(display, DefaultScreen(display));
 	XClearWindow(display,win);
 	XMapRaised(display,win);	
+	wmdeleteMessage = XInternAtom(display, "WM_DELETE_WINDOW", False);
+	XSetWMProtocols(display, win, &wmdeleteMessage, 1);
 	XSetBackground(display,gc,black);
 	XSetForeground(display,gc,white);
 	XSync(display,FALSE);
-	sleep(1);	
+ 	sleep(1);	
 	backgroundColor.red=backgroundColor.green=backgroundColor.blue=0;
 	foregroundColor.red=foregroundColor.green=foregroundColor.blue=255;
 }
@@ -114,13 +117,17 @@ screen_main()
 	{
 		screen_handle_client_message(display, &event);
 	}
+	else if (event.type == Expose)
+	{
+		io_replay();
+	}
 }
 
 screen_handle_client_message(display, e)
 Display display;
 XEvent *e;
 {
-	if ((Atom)e->xclient.data.l[0]==wm_delete_window)
+	if ((Atom)e->xclient.data.l[0]==wmdeleteMessage)
 	{
 		done = TRUE;
 	}
@@ -146,9 +153,10 @@ screen_beep()
  */
 screen_clear()
 {
+	io_replay_clear();
 	screen_clear_colors();
-	screen_background(&backgroundColor);
-	screen_foreground(&foregroundColor);
+	screen_background(backgroundColor);
+	screen_foreground(foregroundColor);
 	XSetWindowBackground(display,win,backgroundPixel);
 	XClearWindow(display,win);	
 	XSetForeground(display,gc,backgroundPixel);	
@@ -459,7 +467,7 @@ screen_clear_colors()
 
 	XFreeColors(display,colormap,pixels,usedColors,0);
 	usedColors=0;
-	memset(&color,0,sizeof(color));
+	memset(&color[0],0,sizeof(color));
 }
 
 /**
@@ -532,87 +540,39 @@ padRGB* theColor;
 	XSetBackground(display,gc,backgroundPixel);
 }
 
-unsigned long screen_get_pixel(x,y)
-int x,y;
+/**
+ * Recursive flood fill
+ */
+_screen_paint(x,y,oldpixel,newpixel)
+unsigned long oldpixel,newpixel;
 {
-	unsigned long c;
-	XImage *i;
-	i = XGetImage(display,win,x,y,1,1,AllPlanes,XYPixmap);
-	c = XGetPixel(i,0,0);
-	XFree(i);
-	return c;	
+	unsigned long p = XGetPixel(image,x,y);
+
+	if (p != oldpixel)
+		return;
+	if (p == newpixel)
+		return;
+	if (p == oldpixel)
+		XPutPixel(image,x,y,newpixel);
+
+	_screen_paint(x-1,y,oldpixel,newpixel);
+	_screen_paint(x+1,y,oldpixel,newpixel);
+	_screen_paint(x,y-1,oldpixel,newpixel);
+	_screen_paint(x,y+1,oldpixel,newpixel);
 }
 
-/**
- * screen_paint - Called to paint at location.
- */
 screen_paint(Coord)
 padPt* Coord;
 {
-  unsigned short xStack[512];
-  unsigned short yStack[512];
-  unsigned char stackentry = 1;
-  unsigned char spanAbove, spanBelow;
-  int x = Coord->x;
-  int y = (Coord->y^0x1FF)&0x1FF;
-  unsigned long oldColor = screen_get_pixel(x,y);
+	int x = Coord->x;
+	int y = Coord->y^0x1FF;
+ 	unsigned long oldpixel;	
 
-	return;
-
-  XSetForeground(display,gc,foregroundPixel);
-
-  if (oldColor == foregroundPixel)
-    return;
-
-  do
-    {
-      unsigned short startx;
-      while (x > 0 && screen_get_pixel(x-1,y) == oldColor)
-        --x;
-
-      spanAbove = spanBelow = FALSE;
-      startx=x;
-
-      while(screen_get_pixel(x,y) == oldColor)
-        {
-          if (y < (511))
-            {
-              unsigned long belowColor = screen_get_pixel(x, y+1);
-              if (!spanBelow  && belowColor == oldColor)
-                {
-                  xStack[stackentry]  = x;
-                  yStack[stackentry]  = y+1;
-                  ++stackentry;
-                  spanBelow = TRUE;
-                }
-              else if (spanBelow && belowColor != oldColor)
-                spanBelow = FALSE;
-            }
- 
-          if (y > 0)
-            {
-              unsigned long aboveColor = screen_get_pixel(x, y-1);
-              if (!spanAbove  && aboveColor == oldColor)
-                {
-                  xStack[stackentry]  = x;
-                  yStack[stackentry]  = y-1;
-                  ++stackentry;
-                  spanAbove = TRUE;
-                }
-              else if (spanAbove && aboveColor != oldColor)
-                spanAbove = FALSE;
-            }
- 
-          ++x;
-        }
-
-      XDrawLine(display,win,gc,startx,y,x-1,y);
-      --stackentry;
-      x = xStack[stackentry];
-      y = yStack[stackentry];
-    }
-  while (stackentry);
-
+	image = XGetImage(display,win,0,0,511,511,AllPlanes,XYPixmap);
+	oldpixel = XGetPixel(image,x,y);
+	_screen_paint(x,y,oldpixel,foregroundPixel);
+	XPutImage(display,win,gc,image,0,0,0,0,511,511);
+	XDestroyImage(image);
 }
 
 /**
@@ -621,7 +581,7 @@ padPt* Coord;
  */
 screen_done()
 {
-	XFree(font);
+	screen_clear_colors();
 	XFreeGC(display,gc);
 	XDestroyWindow(display,win);
 	XCloseDisplay(display);
