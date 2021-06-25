@@ -506,13 +506,13 @@ unsigned char control_pressed, shift_pressed;
 			k=PKEY_THETA;
 			break;
 		case XK_diaeresis:
-			k=PKEY_DIARESIS;
+			k=PKEY_DIAERESIS;
 			break;
 		case XK_Greek_PI:
 			k=PKEY_CAPITAL_PI;
 			break;
 		case XK_odiaeresis:
-			k=PKEY_LOWERCASE_O_WITH_DIARESIS;
+			k=PKEY_LOWERCASE_O_WITH_DIAERESIS;
 			break;
 		case XK_copyright:
 			k=PKEY_COPYRIGHT;
