@@ -155,8 +155,8 @@ screen_clear()
 {
 	io_replay_clear();
 	screen_clear_colors();
-	screen_background(backgroundColor);
-	screen_foreground(foregroundColor);
+	screen_background(&backgroundColor);
+	screen_foreground(&foregroundColor);
 	XSetWindowBackground(display,win,backgroundPixel);
 	XClearWindow(display,win);	
 	XSetForeground(display,gc,backgroundPixel);	
