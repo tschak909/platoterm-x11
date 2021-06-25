@@ -22,6 +22,8 @@
 
 int rxlen;
 padByte rxBuf[32768];
+padByte replaybuf[32768];
+int replaylen;
 struct sockaddr_in sa;
 int sockfd;
 int fileflags;
@@ -41,17 +43,16 @@ char *hostname;
 unsigned short port;
 {
 	hp = gethostbyname(hostname);
-	
-	if (hp == 0)
+
+	if (hp == 0) 
 	{
-		sa.sin_addr.s_addr = inet_addr(hostname);
+		sa.sin_addr.s_addr = inet_addr(hostname);	
 	}
-	else
+	else	
 		bcopy(hp->h_addr,(char *)&sa.sin_addr, hp->h_length);
-	
-	sockfd = socket(AF_INET, SOCK_STREAM, 0);        
+
+        sockfd = socket(AF_INET, SOCK_STREAM, 0);        
         sa.sin_family = AF_INET;       
-        sa.sin_addr.s_addr = inet_addr(hostname);
 	sa.sin_port = htons(port);
         connect(sockfd,(struct sockaddr *)&sa, sizeof(sa)); 	
 
@@ -77,7 +78,32 @@ io_main()
 	if (rxlen < 0 )
 		return;
 
+	/* copy to replay buffer */
+	bcopy(&rxBuf[0],&replaybuf[replaylen],rxlen);
+	replaylen += rxlen;
+
 	ShowPLATO(&rxBuf[0], rxlen);	
+}
+
+/**
+ * Replay
+ */
+io_replay()
+{
+	if (replaylen>0)
+		ShowPLATO(&replaybuf[0],replaylen);
+}
+
+/**
+ * Clear replay buffer
+ */
+io_replay_clear()
+{
+	if (replaylen>0)
+	{
+		memset(&replaybuf[0],0,sizeof(replaybuf));
+		replaylen=0;
+	}
 }
 
 /**
@@ -85,4 +111,5 @@ io_main()
  */
 io_done()
 {
+	close(sockfd);
 }
