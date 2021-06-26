@@ -111,9 +111,8 @@ PLATO terminals had a lot of very special keys, which must be mapped to
 equivalent keys on a PC keyboard. The following table shows the
 PLATO and equivent PC keys:
 
-+---------------+-------------------------+
 |  PLATO        |  PC                     |
-+---------------+-------------------------+
+|---------------|-------------------------|
 |  ANS          |  CTRL-A                 |
 |  BACK         |  CTRL-B                 |
 |  BACK1        |  CTRL-SHIFT-B           |
@@ -147,7 +146,6 @@ PLATO and equivent PC keys:
 |  SIGMA        |  CTRL-+                 |
 |  DELTA        |  CTRL--                 |
 |  ASSIGN       |  ESC                    |
-+---------------+-------------------------+
 
 -------------------
 Further information

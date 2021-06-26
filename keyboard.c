@@ -203,6 +203,7 @@ unsigned char control_pressed, shift_pressed;
 				k=PKEY_G;
 			break;
 		case XK_H:
+		case XK_Help:
 			if (control_pressed)
 				k=PKEY_HELP1;
 			else
